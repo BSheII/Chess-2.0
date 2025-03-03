@@ -9,6 +9,7 @@ module.aliases = {
 	topRight = Vector2.new(1, 1),
 	bottomLeft = Vector2.new(-1, -1),
 	bottomRight = Vector2.new(1, -1),
+	center = Vector2.new(0, 0),
 }
 
 module.aliases.allSides = {
@@ -72,8 +73,8 @@ module.sides.red = {
 function module.playersToSides(players)
 	local sides = {}
 
-	sides[players[1]] = module.sides.red
-	sides[players[2]] = module.sides.blue
+	if players[1] then sides[players[1]] = module.sides.red end
+	if players[2] then sides[players[2]] = module.sides.blue end
 
 	return sides
 end

@@ -1,8 +1,27 @@
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BoardInterface = require(ReplicatedStorage.Modules.Engine.BoardInterface)
 local BoardVisualizer = require(ReplicatedStorage.Modules.Engine.BoardVisualizer)
 local Net = require(ReplicatedStorage.Packages.Net)
+local TokenIdentifiers = require(ReplicatedStorage.Shared.TokenIdentifiers)
+local Utils = require(ReplicatedStorage.Shared.Utils)
+
+local placeTokenRE = Net:RemoteEvent("PlaceToken")
+
+local localPlayer = Players.LocalPlayer
+
+local function grabToken(token)
+	local tokenIsString = typeof(token) == "string"
+
+	BoardInterface.selectedMinion = if tokenIsString then token else token.Name
+
+	if tokenIsString then
+		BoardVisualizer.HoverToken(token)
+	else
+		BoardVisualizer.HoverExistingToken(token)
+	end
+end
 
 local function hookClickDetectors(board)
 	local clickDetectors = {}
@@ -20,7 +39,7 @@ Net:Connect("InitializeGame", function(grid, players)
 	BoardInterface.clientGrid = grid
 	BoardInterface.playersInGame = players
 
-	local newBoard = BoardVisualizer.Visualize(grid)
+	local newBoard = BoardVisualizer.VisualizeBoard(grid)
 
 	local sizeX, sizeY = #grid, #grid[1]
 
@@ -34,8 +53,13 @@ Net:Connect("InitializeGame", function(grid, players)
 
 	hookClickDetectors(newBoard)
 
-	BoardInterface.selectedMinion = "King"
-	BoardVisualizer.HoverToken(BoardInterface.selectedMinion)
+	BoardInterface.localSide = Utils.playersToSides(players)[localPlayer]
+
+	grabToken("King")
+
+	task.delay(4, function()
+		grabToken("Knight")
+	end)
 end)
 
 Net:Connect("EndGame", function()
@@ -46,11 +70,37 @@ end)
 BoardInterface.attemptPlacement:Connect(function(coordinates)
 	if BoardInterface.selectedMinion == nil then return end
 
-	-- TODO: Tell server to try it instead of doing it here and not changing selected minion until sure it worked
+	placeTokenRE:FireServer(BoardInterface.selectedMinion, coordinates)
+end)
 
-	BoardInterface.clientGrid[coordinates.X][coordinates.Y] = BoardInterface.selectedMinion
+BoardInterface.attemptReallocation:Connect(function(coordinates)
+	local token
 
-	BoardVisualizer.PlaceToken(BoardInterface.selectedMinion, coordinates)
+	for currentToken, tokenCoordinates in BoardInterface.tokensLookup do
+		if tokenCoordinates ~= coordinates then continue end
+
+		token = currentToken
+		break
+	end
+
+	BoardInterface.clientGrid[coordinates.X][coordinates.Y] = TokenIdentifiers.empty
+
+	grabToken(token)
+end)
+
+Net:Connect("PlaceToken", function(minion, coordinates)
+	if BoardInterface.selectedMinion ~= minion then
+		warn(`oopsie doopsie I did a fucky wucky in the client-server sync`)
+		return
+	end
+
+	BoardInterface.clientGrid[coordinates.X][coordinates.Y] = TokenIdentifiers[BoardInterface.selectedMinion:lower()]
+
+	local token = BoardVisualizer.PlaceToken(BoardInterface.selectedMinion, coordinates)
+
+	token:SetAttribute("Owner", localPlayer)
+
+	BoardInterface.tokensLookup[token] = coordinates
 	BoardInterface.selectedMinion = nil
 end)
 

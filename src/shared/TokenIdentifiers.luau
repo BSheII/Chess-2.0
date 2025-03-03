@@ -1,5 +1,5 @@
 return {
 	empty = 0,
-	crown = 1,
+	king = 1,
 	knight = 2,
 }
