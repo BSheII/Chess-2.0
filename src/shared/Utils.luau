@@ -1,5 +1,7 @@
 local module = {}
 
+local DEBUG_MODE = true
+
 module.aliases = {
 	left = Vector2.new(-1, 0),
 	right = Vector2.new(1, 0),
@@ -70,13 +72,48 @@ module.sides.red = {
 	Vector2.new(10, 8),
 }
 
-function module.playersToSides(players)
-	local sides = {}
+function module.getMatchFromPlayer(matchesList, player)
+	for _, match in matchesList do
+		if not table.find(match.players, player) then continue end
 
-	if players[1] then sides[players[1]] = module.sides.red end
-	if players[2] then sides[players[2]] = module.sides.blue end
+		return match
+	end
 
-	return sides
+	return
+end
+
+function module.stringToVector2(string)
+	local x, y = string:match("<Vector2>%s*%((%-?%d+%.?%d*),%s*(%-?%d+%.?%d*)%)")
+
+	if x and y then return Vector2.new(tonumber(x), tonumber(y)) end
+
+	return nil
+end
+
+function module.vector2ToString(vector)
+	return string.format("<Vector2> (%.0f, %.0f)", vector.X, vector.Y)
+end
+
+function module.DesGrid(grid)
+	local desGrid = {}
+
+	for serVector2, pieceIdentifier in grid do
+		local vector2 = module.stringToVector2(serVector2)
+
+		desGrid[vector2] = pieceIdentifier
+	end
+
+	return desGrid
+end
+
+function module.debug(message)
+	if DEBUG_MODE == true then warn(message) end
+end
+
+function module.correctTokenPosition(cframe, reverse)
+	local extraCFrame = if reverse then CFrame.Angles(0, math.rad(180), math.rad(90)) else CFrame.Angles(0, 0, math.rad(90))
+
+	return cframe * extraCFrame * CFrame.new(0.5, 0, 0)
 end
 
 return module

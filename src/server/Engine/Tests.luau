@@ -1,7 +1,9 @@
-local BoardLogic = require(script.Parent.BoardServerLogic)
+local BoardInterface = require(script.Parent.BoardServerInterface)
 
-task.wait(3)
+task.spawn(function()
+	task.wait(3)
 
-BoardLogic.InitializeGame(Vector2.new(10, 8), { game.Players.Vesp_Ithon })
+	BoardInterface.initializeGameSignal:Fire(Vector2.new(10, 8), { game.Players.Vesp_Ithon })
+end)
 
 return 0
